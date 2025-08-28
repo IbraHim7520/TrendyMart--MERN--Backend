@@ -23,11 +23,12 @@ const client = new MongoClient(uri, {
 
 async function run() {
     try{
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    console.log("Successfully connected to MongoDB!");
     
     const Database = client.db("Trendy-Mart")
     const UserRole = Database.collection("UserRole")
     const SellerRequest = Database.collection("SellerRequest");
+    const Products = Database.collection("Products")
 
     app.post('/add-userrole', async(req , res)=>{
        try{
@@ -51,8 +52,40 @@ async function run() {
        }
     })
     app.post("/seller-req", async(req , res)=>{
+        try{
         const reqInfo = req.body.data 
-        console.log(reqInfo)
+        const result = await SellerRequest.insertOne(reqInfo);
+        if(result){
+            res.send(result)
+        }else{
+            res.status(500).send({message:"Internal Server Error!"})
+        }
+        }catch{
+            res.status(503).send({message: "Service Unavailable"})
+        }
+    })
+
+    app.get('/seller-reqs/:email', async(req, res)=>{
+        const email = req.params.email;
+        const qry = {
+            SellerEmail: email
+        }
+        const requestInfo = await SellerRequest.findOne(qry);
+       res.send(requestInfo)
+    })
+    app.post('/post-product', async(req , res) =>{
+        const productData = req.body.ProductData
+        productData.OfferPrice = parseInt(productData.OfferPrice)
+        productData.Price = parseInt(productData.Price)
+        productData.Quantity = parseInt(productData.Quantity)
+        
+        try{
+            const result = await Products.insertOne(productData);
+            res.send(result)
+        }catch{
+            res.status(400).send({message: "Something went wrong!" })
+        }
+
     })
 
     }finally{
