@@ -8,7 +8,7 @@ app.use(express.json())
 app.use(cors())
 
 //Database
-const {MongoClient , ServerApiVersion} = require('mongodb')
+const {MongoClient , ServerApiVersion, ObjectId} = require('mongodb')
 const uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS}@cluster0.9vvyx12.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`
 app.get('/', (req, res)=>{
     res.send("Helloooww Trendy Mart")
@@ -29,6 +29,7 @@ async function run() {
     const UserRole = Database.collection("UserRole")
     const SellerRequest = Database.collection("SellerRequest");
     const Products = Database.collection("Products")
+    const cart = Database.collection("ProductCart")
 
     app.post('/add-userrole', async(req , res)=>{
        try{
@@ -84,6 +85,63 @@ async function run() {
             res.send(result)
         }catch{
             res.status(400).send({message: "Something went wrong!" })
+        }
+    })
+    app.get('/seller-products/:email', async(req , res)=>{
+        const sellerEmail = req.params.email
+        const qury = {Owner: sellerEmail};
+        try{
+            const response = await Products.find(qury).toArray()
+            res.send(response)
+        }catch{
+            res.status(400).send({message: "No Data found!"})
+        }
+    })
+    app.get('/popular-products', async(req , res)=>{
+        const productsData = await Products.find().sort(
+            {
+                Ratings: -1
+            }
+        ).limit(10).toArray();
+        res.send(productsData);
+    })
+    app.get('/all-products', async(req , res)=>{
+        try{
+                const response = await Products.find().toArray()
+                res.send(response);
+        }catch{
+            res.status(401).send({message: "Somethin is wrong! Please try again later"})
+        }
+    })
+    app.get('/one-product/:id', async(req , res)=>{
+        const productID = req.params.id;
+        const IDQry = {_id: new ObjectId(productID)}
+        try{
+            const response = await Products.findOne(IDQry)
+            res.send(response)
+        }catch{
+            res.status(401).send({message: "Something went wron!"})
+        }
+    })
+
+    app.post('/add-cart', async(req , res)=>{
+        const productData = req.body.data
+        try{
+            const id = productData?._id
+            const findResult = await cart.findOne({
+                _id: id
+            })
+            if(findResult){
+                 res.send({message: "Items already added."})
+                return
+            }
+               
+                console.log(findResult)
+            
+            const postingResult = await cart.insertOne(productData)
+            res.send(postingResult)
+        }catch{
+            res.status(400).send({message: "Something went wrong!"})
         }
 
     })
